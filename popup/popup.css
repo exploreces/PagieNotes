@@ -39,6 +39,35 @@ body {
   font-size: 0.88rem;
 }
 
+.input-card {
+  margin-bottom: 10px;
+}
+
+.input-label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #2c3751;
+}
+
+.topic-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  resize: vertical;
+  min-height: 78px;
+  font: inherit;
+  color: var(--text);
+  background: #fdfdff;
+}
+
+.topic-input:focus {
+  outline: 2px solid rgba(51, 93, 255, 0.2);
+  border-color: var(--primary);
+}
+
 .analyze-btn {
   width: 100%;
   border: none;
@@ -101,6 +130,12 @@ body {
 .note-list li {
   margin-bottom: 7px;
   line-height: 1.38;
+}
+
+.topic-meta {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  color: var(--muted);
 }
 
 .hidden {

@@ -5,12 +5,15 @@
 - A concise summary
 - Important points
 - Miscellaneous/supporting information
+- Topic-specific insights based on user-entered interests
 
 ## Features
 
 - Extracts meaningful text from headings, paragraphs, and list items on the active page
 - Uses in-browser scoring heuristics to identify high-signal sentences
 - Organizes results into clear note categories
+- Lets users enter topics and surfaces matching insights from the page
+- Handles random/irrelevant topic input with clear fallback guidance
 - Presents output in a clean popup UI
 
 ## Load the Extension (Chrome / Edge)

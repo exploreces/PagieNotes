@@ -13,6 +13,18 @@
         <p>Generate structured notes from the current page.</p>
       </header>
 
+      <section class="card input-card">
+        <label for="topicInput" class="input-label">
+          Topics of interest (comma separated)
+        </label>
+        <textarea
+          id="topicInput"
+          class="topic-input"
+          placeholder="Example: pricing, deadlines, security, AI tools"
+          rows="3"
+        ></textarea>
+      </section>
+
       <button id="analyzeBtn" class="analyze-btn">Analyze This Page</button>
 
       <section id="status" class="status" aria-live="polite"></section>
@@ -31,6 +43,12 @@
         <article class="card">
           <h2>Miscellaneous / Supporting Info</h2>
           <ul id="miscList" class="note-list"></ul>
+        </article>
+
+        <article class="card">
+          <h2>Topic Insights</h2>
+          <p id="topicMeta" class="topic-meta"></p>
+          <ul id="topicList" class="note-list"></ul>
         </article>
       </section>
     </main>

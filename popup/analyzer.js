@@ -77,6 +77,89 @@ function normalizeBullet(sentence) {
     .trim();
 }
 
+function getTopicKeywords(topics) {
+  return topics
+    .map((topic) => (topic || "").toLowerCase().trim())
+    .filter((topic) => topic.length >= 2)
+    .flatMap((topic) => topic.split(/\s+/))
+    .map((token) => token.replace(/[^a-z0-9]/g, ""))
+    .filter((token) => token.length >= 2 && !STOP_WORDS.has(token));
+}
+
+export function analyzeTopicInsights(content, topics) {
+  const sourceText = (content || "").trim();
+  const cleanTopics = (topics || [])
+    .map((topic) => (topic || "").trim())
+    .filter(Boolean);
+
+  if (!sourceText) {
+    return {
+      validTopics: cleanTopics,
+      insights: [],
+      message: "No readable page content found for topic matching."
+    };
+  }
+
+  if (!cleanTopics.length) {
+    return {
+      validTopics: [],
+      insights: [],
+      message: "Add one or more topics to get focused insights."
+    };
+  }
+
+  const topicKeywords = getTopicKeywords(cleanTopics);
+  if (!topicKeywords.length) {
+    return {
+      validTopics: [],
+      insights: [],
+      message: "Topics look invalid. Use real words like pricing, roadmap, or policy."
+    };
+  }
+
+  const sentences = splitIntoSentences(sourceText).slice(0, 220);
+  const matched = [];
+
+  for (const sentence of sentences) {
+    const sentenceLower = sentence.toLowerCase();
+    const hits = topicKeywords.filter((keyword) => sentenceLower.includes(keyword));
+    if (hits.length) {
+      matched.push({
+        sentence: normalizeBullet(sentence),
+        score: hits.length
+      });
+    }
+  }
+
+  matched.sort((a, b) => b.score - a.score || a.sentence.length - b.sentence.length);
+  const uniqueInsights = [];
+  const seen = new Set();
+  for (const item of matched) {
+    if (!seen.has(item.sentence)) {
+      seen.add(item.sentence);
+      uniqueInsights.push(item.sentence);
+    }
+    if (uniqueInsights.length >= 7) {
+      break;
+    }
+  }
+
+  if (!uniqueInsights.length) {
+    return {
+      validTopics: cleanTopics,
+      insights: [],
+      message:
+        "No strong match found for your topics on this page. Try simpler or more relevant terms."
+    };
+  }
+
+  return {
+    validTopics: cleanTopics,
+    insights: uniqueInsights,
+    message: `Showing matches for: ${cleanTopics.join(", ")}`
+  };
+}
+
 export function analyzePageContent(content) {
   const sourceText = (content || "").trim();
   if (!sourceText) {

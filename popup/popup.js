@@ -1,11 +1,14 @@
-import { analyzePageContent } from "./analyzer.js";
+import { analyzePageContent, analyzeTopicInsights } from "./analyzer.js";
 
 const analyzeBtn = document.getElementById("analyzeBtn");
+const topicInputEl = document.getElementById("topicInput");
 const statusEl = document.getElementById("status");
 const resultEl = document.getElementById("result");
 const summaryTextEl = document.getElementById("summaryText");
 const importantListEl = document.getElementById("importantList");
 const miscListEl = document.getElementById("miscList");
+const topicMetaEl = document.getElementById("topicMeta");
+const topicListEl = document.getElementById("topicList");
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -26,6 +29,14 @@ function fillList(listElement, items, emptyMessage) {
     li.textContent = item;
     listElement.appendChild(li);
   }
+}
+
+function parseTopics(inputValue) {
+  return (inputValue || "")
+    .split(/[,\n]/)
+    .map((topic) => topic.trim())
+    .filter(Boolean)
+    .slice(0, 12);
 }
 
 function extractPageText() {
@@ -90,6 +101,8 @@ async function analyzeCurrentPage() {
 
     setStatus("Summarizing and organizing notes...");
     const analysis = analyzePageContent(pageText);
+    const topics = parseTopics(topicInputEl.value);
+    const topicAnalysis = analyzeTopicInsights(pageText, topics);
 
     summaryTextEl.textContent = analysis.summary;
     fillList(
@@ -102,9 +115,18 @@ async function analyzeCurrentPage() {
       analysis.miscPoints,
       "No supporting points were identified."
     );
+    fillList(
+      topicListEl,
+      topicAnalysis.insights,
+      topicAnalysis.message
+    );
+    topicMetaEl.textContent = topicAnalysis.message;
 
     resultEl.classList.remove("hidden");
-    setStatus("Done.");
+    const topicStatus = topics.length
+      ? "Done. Topic insights included."
+      : "Done. Add topics for focused insights.";
+    setStatus(topicStatus);
   } catch (error) {
     setStatus(error.message || "Unable to analyze this page.", true);
   } finally {
