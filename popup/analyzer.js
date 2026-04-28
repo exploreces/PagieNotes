@@ -8,19 +8,28 @@ const STOP_WORDS = new Set([
 ]);
 
 const IMPORTANT_CUES = [
-  "key",
-  "important",
-  "must",
-  "should",
-  "critical",
-  "main",
-  "conclusion",
-  "result",
-  "finding",
-  "summary",
-  "recommend",
-  "therefore"
+  "key", "important", "must", "should", "critical", "main", "conclusion", "result",
+  "finding", "summary", "recommend", "therefore", "impact", "benefit", "risk",
+  "problem", "solution", "introduces", "announced"
 ];
+
+const INTENT_CUES = {
+  tutorial: ["how to", "step", "guide", "tutorial", "walkthrough"],
+  opinion: ["i think", "in my view", "opinion", "argue", "perspective"],
+  news: ["announced", "today", "reported", "breaking", "update"],
+  docs: ["api", "reference", "specification", "parameters", "usage"],
+  marketing: ["buy", "pricing", "trial", "subscribe", "features"]
+};
+
+function toPlainText(input) {
+  if (typeof input === "string") {
+    return input;
+  }
+  if (input && typeof input === "object") {
+    return `${input.title || ""} ${input.description || ""} ${(input.textBlocks || []).join(" ")}`.trim();
+  }
+  return "";
+}
 
 function splitIntoSentences(text) {
   return text
@@ -38,14 +47,15 @@ function tokenize(text) {
     .filter((word) => word && !STOP_WORDS.has(word) && word.length > 2);
 }
 
-function buildWordFrequency(text) {
-  const tokens = tokenize(text);
-  const frequency = new Map();
+function normalizeBullet(sentence) {
+  return sentence.replace(/^\s*[-*•]\s*/, "").replace(/\s+/g, " ").trim();
+}
 
-  for (const token of tokens) {
+function buildWordFrequency(text) {
+  const frequency = new Map();
+  for (const token of tokenize(text)) {
     frequency.set(token, (frequency.get(token) || 0) + 1);
   }
-
   return frequency;
 }
 
@@ -54,27 +64,38 @@ function scoreSentence(sentence, frequency) {
   if (!words.length) {
     return 0;
   }
-
   let score = 0;
   for (const word of words) {
     score += frequency.get(word) || 0;
   }
-
-  const normalizedScore = score / words.length;
-  const cueBoost = IMPORTANT_CUES.some((cue) =>
-    sentence.toLowerCase().includes(cue)
-  )
-    ? 1.2
-    : 1;
-
-  return normalizedScore * cueBoost;
+  const cueBoost = IMPORTANT_CUES.some((cue) => sentence.toLowerCase().includes(cue)) ? 1.2 : 1;
+  return (score / words.length) * cueBoost;
 }
 
-function normalizeBullet(sentence) {
-  return sentence
-    .replace(/^\s*[-*•]\s*/, "")
-    .replace(/\s+/g, " ")
-    .trim();
+function inferIntent(text) {
+  const lower = text.toLowerCase();
+  let best = { label: "informational article", score: 0 };
+  for (const [label, cues] of Object.entries(INTENT_CUES)) {
+    const score = cues.reduce((acc, cue) => acc + (lower.includes(cue) ? 1 : 0), 0);
+    if (score > best.score) {
+      best = { label, score };
+    }
+  }
+  return best.label;
+}
+
+function inferContext(pageData) {
+  const parts = [];
+  if (pageData.siteName) {
+    parts.push(`Source: ${pageData.siteName}`);
+  }
+  if (pageData.title) {
+    parts.push(`Page: ${pageData.title}`);
+  }
+  if (pageData.headings?.length) {
+    parts.push(`Sections detected: ${Math.min(pageData.headings.length, 8)}`);
+  }
+  return parts.join(" | ");
 }
 
 function getTopicKeywords(topics) {
@@ -87,25 +108,14 @@ function getTopicKeywords(topics) {
 }
 
 export function analyzeTopicInsights(content, topics) {
-  const sourceText = (content || "").trim();
-  const cleanTopics = (topics || [])
-    .map((topic) => (topic || "").trim())
-    .filter(Boolean);
+  const sourceText = toPlainText(content).trim();
+  const cleanTopics = (topics || []).map((topic) => (topic || "").trim()).filter(Boolean);
 
   if (!sourceText) {
-    return {
-      validTopics: cleanTopics,
-      insights: [],
-      message: "No readable page content found for topic matching."
-    };
+    return { validTopics: cleanTopics, insights: [], message: "No readable page content found for topic matching." };
   }
-
   if (!cleanTopics.length) {
-    return {
-      validTopics: [],
-      insights: [],
-      message: "Add one or more topics to get focused insights."
-    };
+    return { validTopics: [], insights: [], message: "Add one or more topics to get focused insights." };
   }
 
   const topicKeywords = getTopicKeywords(cleanTopics);
@@ -117,94 +127,100 @@ export function analyzeTopicInsights(content, topics) {
     };
   }
 
-  const sentences = splitIntoSentences(sourceText).slice(0, 220);
+  const sentences = splitIntoSentences(sourceText).slice(0, 280);
   const matched = [];
-
   for (const sentence of sentences) {
-    const sentenceLower = sentence.toLowerCase();
-    const hits = topicKeywords.filter((keyword) => sentenceLower.includes(keyword));
+    const lower = sentence.toLowerCase();
+    const hits = topicKeywords.filter((keyword) => lower.includes(keyword));
     if (hits.length) {
-      matched.push({
-        sentence: normalizeBullet(sentence),
-        score: hits.length
-      });
+      matched.push({ sentence: normalizeBullet(sentence), score: hits.length });
     }
   }
 
   matched.sort((a, b) => b.score - a.score || a.sentence.length - b.sentence.length);
-  const uniqueInsights = [];
   const seen = new Set();
+  const insights = [];
   for (const item of matched) {
     if (!seen.has(item.sentence)) {
       seen.add(item.sentence);
-      uniqueInsights.push(item.sentence);
+      insights.push(item.sentence);
     }
-    if (uniqueInsights.length >= 7) {
+    if (insights.length >= 8) {
       break;
     }
   }
 
-  if (!uniqueInsights.length) {
+  if (!insights.length) {
     return {
       validTopics: cleanTopics,
       insights: [],
-      message:
-        "No strong match found for your topics on this page. Try simpler or more relevant terms."
+      message: "No strong match found for your topics on this page. Try simpler or more relevant terms."
     };
   }
-
-  return {
-    validTopics: cleanTopics,
-    insights: uniqueInsights,
-    message: `Showing matches for: ${cleanTopics.join(", ")}`
-  };
+  return { validTopics: cleanTopics, insights, message: `Showing matches for: ${cleanTopics.join(", ")}` };
 }
 
 export function analyzePageContent(content) {
-  const sourceText = (content || "").trim();
+  const sourceText = toPlainText(content).trim();
+  const pageData = typeof content === "object" && content ? content : {};
   if (!sourceText) {
     return {
       summary: "No usable page content was detected.",
+      intent: "unknown",
+      context: "",
       importantPoints: [],
-      miscPoints: []
+      miscPoints: [],
+      deepDigest: []
     };
   }
 
-  const sentences = splitIntoSentences(sourceText).slice(0, 160);
+  const sentences = splitIntoSentences(sourceText).slice(0, 280);
   const frequency = buildWordFrequency(sourceText);
-  const scoredSentences = sentences.map((sentence, index) => ({
+  const scored = sentences.map((sentence, index) => ({
     sentence,
     index,
     score: scoreSentence(sentence, frequency)
   }));
+  scored.sort((a, b) => b.score - a.score);
 
-  scoredSentences.sort((a, b) => b.score - a.score);
-
-  const summaryCount = Math.min(3, scoredSentences.length);
-  const summarySentences = scoredSentences
-    .slice(0, summaryCount)
+  const summary = scored
+    .slice(0, Math.min(4, scored.length))
     .sort((a, b) => a.index - b.index)
-    .map((item) => item.sentence);
+    .map((item) => item.sentence)
+    .join(" ");
 
-  const importantCount = Math.min(6, scoredSentences.length);
-  const importantPoints = scoredSentences
-    .slice(0, importantCount)
+  const importantPoints = scored
+    .slice(0, Math.min(7, scored.length))
     .sort((a, b) => a.index - b.index)
     .map((item) => normalizeBullet(item.sentence));
 
-  const lowerHalfStart = Math.floor(scoredSentences.length / 2);
-  const miscPoints = scoredSentences
-    .slice(lowerHalfStart, lowerHalfStart + 8)
+  const miscPoints = scored
+    .slice(Math.floor(scored.length / 2))
     .sort((a, b) => a.index - b.index)
     .map((item) => normalizeBullet(item.sentence))
-    .filter((sentence) => !importantPoints.includes(sentence))
-    .slice(0, 6);
+    .filter((line) => !importantPoints.includes(line))
+    .slice(0, 7);
+
+  const deepDigest = [];
+  if (pageData.headings?.length) {
+    deepDigest.push(`Primary sections: ${pageData.headings.slice(0, 6).join(" | ")}`);
+  }
+  if (pageData.description) {
+    deepDigest.push(`Meta context: ${pageData.description}`);
+  }
+  if (importantPoints.length) {
+    deepDigest.push(`Core takeaway: ${importantPoints[0]}`);
+  }
+  if (importantPoints.length > 1) {
+    deepDigest.push(`Secondary takeaway: ${importantPoints[1]}`);
+  }
 
   return {
-    summary:
-      summarySentences.join(" ") ||
-      "The page was read, but a concise summary could not be generated.",
+    summary: summary || "The page was read, but a concise summary could not be generated.",
+    intent: inferIntent(sourceText),
+    context: inferContext(pageData),
     importantPoints,
-    miscPoints
+    miscPoints,
+    deepDigest: deepDigest.slice(0, 5)
   };
 }

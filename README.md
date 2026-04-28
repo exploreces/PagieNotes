@@ -1,16 +1,19 @@
 # Page Insight Notes (Browser Extension)
 
-`Page Insight Notes` is a Manifest V3 browser extension that analyzes the currently open webpage and produces:
+`Page Insight Notes` is a Manifest V3 browser extension that deeply analyzes the currently open webpage and produces:
 
 - A concise summary
+- Page intent and context understanding
 - Important points
 - Miscellaneous/supporting information
 - Topic-specific insights based on user-entered interests
+- Comprehensive digest of core page sections and takeaways
 
 ## Features
 
 - Extracts meaningful text from headings, paragraphs, and list items on the active page
-- Uses in-browser scoring heuristics to identify high-signal sentences
+- Attempts controlled auto-scroll to trigger lazy-loaded content before extraction
+- Uses in-browser semantic scoring heuristics to identify high-signal sentences and intent
 - Organizes results into clear note categories
 - Lets users enter topics and surfaces matching insights from the page
 - Handles random/irrelevant topic input with clear fallback guidance

@@ -122,6 +122,13 @@ body {
   white-space: pre-wrap;
 }
 
+.meta-text {
+  margin: 0 0 6px;
+  color: #34405a;
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
 .note-list {
   margin: 0;
   padding-left: 18px;

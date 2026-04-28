@@ -5,10 +5,13 @@ const topicInputEl = document.getElementById("topicInput");
 const statusEl = document.getElementById("status");
 const resultEl = document.getElementById("result");
 const summaryTextEl = document.getElementById("summaryText");
+const intentTextEl = document.getElementById("intentText");
+const contextTextEl = document.getElementById("contextText");
 const importantListEl = document.getElementById("importantList");
 const miscListEl = document.getElementById("miscList");
 const topicMetaEl = document.getElementById("topicMeta");
 const topicListEl = document.getElementById("topicList");
+const digestListEl = document.getElementById("digestList");
 
 function setStatus(message, isError = false) {
   statusEl.textContent = message;
@@ -39,11 +42,23 @@ function parseTopics(inputValue) {
     .slice(0, 12);
 }
 
-function extractPageText() {
+async function extractPagePayload() {
   const blockedSchemes = ["chrome:", "edge:", "about:", "moz-extension:"];
   if (blockedSchemes.some((scheme) => window.location.protocol.startsWith(scheme))) {
-    return "";
+    return null;
   }
+
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  // Attempt to trigger lazy-loaded blocks by controlled scrolling.
+  const initialY = window.scrollY;
+  const maxScrollSteps = 6;
+  for (let i = 0; i < maxScrollSteps; i += 1) {
+    const progress = (i + 1) / maxScrollSteps;
+    window.scrollTo(0, Math.floor(document.body.scrollHeight * progress));
+    await sleep(160);
+  }
+  window.scrollTo(0, initialY);
 
   const selectorsToRemove = [
     "script",
@@ -58,20 +73,41 @@ function extractPageText() {
     "[aria-hidden='true']"
   ];
 
-  const clone = document.body.cloneNode(true);
+  const clone = document.body?.cloneNode(true);
+  if (!clone) {
+    return null;
+  }
+
   for (const selector of selectorsToRemove) {
     clone.querySelectorAll(selector).forEach((node) => node.remove());
   }
 
-  const chunkCandidates = Array.from(clone.querySelectorAll("h1, h2, h3, p, li, article"))
+  const textBlocks = Array.from(clone.querySelectorAll("h1, h2, h3, p, li, article, section"))
     .map((el) => el.textContent?.trim() || "")
-    .filter((text) => text.length > 30);
+    .filter((text) => text.length > 35)
+    .slice(0, 1200);
 
-  const joinedChunks = chunkCandidates.join(". ");
-  const bodyText = clone.innerText || clone.textContent || "";
-  const preferredText = joinedChunks.length > bodyText.length * 0.35 ? joinedChunks : bodyText;
+  const headings = Array.from(clone.querySelectorAll("h1, h2, h3"))
+    .map((el) => el.textContent?.trim() || "")
+    .filter((text) => text.length > 2)
+    .slice(0, 40);
 
-  return preferredText.replace(/\s+/g, " ").trim().slice(0, 40000);
+  const metaDescription = document.querySelector("meta[name='description']")?.content?.trim() || "";
+  const siteName = document.querySelector("meta[property='og:site_name']")?.content?.trim() || "";
+  const title = document.title?.trim() || "";
+
+  const mergedText = `${title}. ${metaDescription}. ${textBlocks.join(". ")}`.replace(/\s+/g, " ").trim();
+  const cleanText = mergedText.slice(0, 120000);
+
+  return {
+    url: location.href,
+    title,
+    siteName,
+    description: metaDescription,
+    headings,
+    textBlocks: textBlocks.slice(0, 350),
+    text: cleanText
+  };
 }
 
 async function getActiveTabId() {
@@ -82,7 +118,7 @@ async function getActiveTabId() {
 async function analyzeCurrentPage() {
   try {
     analyzeBtn.disabled = true;
-    setStatus("Reading page content...");
+    setStatus("Extracting full page content...");
     resultEl.classList.add("hidden");
 
     const tabId = await getActiveTabId();
@@ -90,21 +126,24 @@ async function analyzeCurrentPage() {
       throw new Error("No active tab found.");
     }
 
-    const [{ result: pageText }] = await chrome.scripting.executeScript({
+    const [{ result: payload }] = await chrome.scripting.executeScript({
       target: { tabId },
-      func: extractPageText
+      func: extractPagePayload
     });
 
-    if (!pageText || pageText.length < 60) {
+    const pageText = payload?.text || "";
+    if (!payload || !pageText || pageText.length < 120) {
       throw new Error("Not enough readable content on this page.");
     }
 
-    setStatus("Summarizing and organizing notes...");
-    const analysis = analyzePageContent(pageText);
+    setStatus("Analyzing semantics, context, and intent...");
+    const analysis = analyzePageContent(payload);
     const topics = parseTopics(topicInputEl.value);
-    const topicAnalysis = analyzeTopicInsights(pageText, topics);
+    const topicAnalysis = analyzeTopicInsights(payload, topics);
 
     summaryTextEl.textContent = analysis.summary;
+    intentTextEl.textContent = `Detected intent: ${analysis.intent}`;
+    contextTextEl.textContent = analysis.context || "Context metadata is limited on this page.";
     fillList(
       importantListEl,
       analysis.importantPoints,
@@ -119,6 +158,11 @@ async function analyzeCurrentPage() {
       topicListEl,
       topicAnalysis.insights,
       topicAnalysis.message
+    );
+    fillList(
+      digestListEl,
+      analysis.deepDigest || [],
+      "Digest details were limited for this page."
     );
     topicMetaEl.textContent = topicAnalysis.message;
 
