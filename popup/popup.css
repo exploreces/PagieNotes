@@ -1,0 +1,108 @@
+:root {
+  color-scheme: light;
+  --bg: #f7f8fc;
+  --card-bg: #ffffff;
+  --text: #1d2433;
+  --muted: #5a6478;
+  --border: #dfe4ef;
+  --primary: #335dff;
+  --primary-hover: #2748c8;
+  --shadow: 0 6px 16px rgba(35, 59, 130, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", Tahoma, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.container {
+  width: 390px;
+  max-height: 580px;
+  overflow-y: auto;
+  padding: 14px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.header p {
+  margin: 6px 0 12px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.analyze-btn {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 11px 12px;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease-in-out;
+}
+
+.analyze-btn:hover {
+  background: var(--primary-hover);
+}
+
+.analyze-btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.status {
+  min-height: 22px;
+  margin: 10px 2px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: var(--shadow);
+}
+
+.card h2 {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+}
+
+#summaryText {
+  margin: 0;
+  color: #2d3647;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.note-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.note-list li {
+  margin-bottom: 7px;
+  line-height: 1.38;
+}
+
+.hidden {
+  display: none;
+}

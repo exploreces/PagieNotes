@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Page Insight Notes",
+  "description": "Analyze the current webpage and generate concise, structured notes.",
+  "version": "1.0.0",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Page Insight Notes"
+  }
+}

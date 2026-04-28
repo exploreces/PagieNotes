@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Page Insight Notes</title>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="header">
+        <h1>Page Insight Notes</h1>
+        <p>Generate structured notes from the current page.</p>
+      </header>
+
+      <button id="analyzeBtn" class="analyze-btn">Analyze This Page</button>
+
+      <section id="status" class="status" aria-live="polite"></section>
+
+      <section id="result" class="result hidden">
+        <article class="card">
+          <h2>Concise Summary</h2>
+          <p id="summaryText"></p>
+        </article>
+
+        <article class="card">
+          <h2>Important Points</h2>
+          <ul id="importantList" class="note-list"></ul>
+        </article>
+
+        <article class="card">
+          <h2>Miscellaneous / Supporting Info</h2>
+          <ul id="miscList" class="note-list"></ul>
+        </article>
+      </section>
+    </main>
+
+    <script type="module" src="./popup.js"></script>
+  </body>
+</html>
